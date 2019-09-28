@@ -6,6 +6,7 @@ import dgram from 'dgram';
 // Keep a global reference of the window object, if you don't, the window will
 // be closed automatically when the JavaScript object is garbage collected.
 let mainWindow;
+let finishedLoading = false;
 
 const isDevMode = process.execPath.match(/[\\/]electron/);
 
@@ -26,6 +27,11 @@ const createWindow = async () => {
     await installExtension(REACT_DEVELOPER_TOOLS);
     mainWindow.webContents.openDevTools();
   }
+
+  mainWindow.webContents.on('did-finish-load', () => {
+    mainWindow.webContents.send('ping', 'whoooooooh!');
+    finishedLoading = true;
+  });
 
   // Emitted when the window is closed.
   mainWindow.on('closed', () => {
@@ -60,6 +66,12 @@ app.on('activate', () => {
 
 // In this file you can include the rest of your app's specific main process
 // code. You can also put them in separate files and import them here.
+const sendToRenderer = (type, data) => {
+  if (finishedLoading) {
+    mainWindow.webContents.send(type, data);
+  }
+};
+
 const server = dgram.createSocket('udp4');
 
 server.on('error', (err) => {
@@ -69,6 +81,7 @@ server.on('error', (err) => {
 
 server.on('message', (msg, rinfo) => {
   console.log(`server got: ${msg} from ${rinfo.address}:${rinfo.port}`);
+  sendToRenderer('test', 'testdata');
 });
 
 server.on('listening', () => {
